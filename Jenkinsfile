@@ -9,52 +9,11 @@ pipeline {
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Example') {
             steps {
-                // Checkout code from Git
-                git credentialsId: "${SSH_CREDENTIALS_ID}", url: "${GIT_REPO}"
+                // Use the environment variables
+                sh 'echo "Deploying to $DEPLOY_SERVER at $DEPLOY_PATH"'
             }
-        }
-
-        stage('Transfer Files') {
-            steps {
-                // Transfer files to EC2 instance
-                sshagent(credentials: ["${SSH_CREDENTIALS_ID}"]) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ubuntu@${DEPLOY_SERVER_IP} 'mkdir -p ${DEPLOY_PATH}'
-                    rsync -avz --delete --exclude .git ./ ubuntu@${DEPLOY_SERVER_IP}:${DEPLOY_PATH}
-                    """
-                }
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                // Install Laravel dependencies on EC2 instance
-                sshagent(credentials: ["${SSH_CREDENTIALS_ID}"]) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ubuntu@${DEPLOY_SERVER_IP} '
-                    cd ${DEPLOY_PATH} &&
-                    composer install --no-dev --optimize-autoloader &&
-                    cp .env.example .env &&
-                    php artisan key:generate &&
-                    php artisan migrate --force &&
-                    php artisan config:cache &&
-                    php artisan route:cache &&
-                    php artisan view:cache'
-                    "
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Deployment successful!'
-        }
-        failure {
-            echo 'Deployment failed.'
         }
     }
 }
