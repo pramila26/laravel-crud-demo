@@ -4,7 +4,7 @@ pipeline {
     environment {
         DEPLOY_SERVER_IP = '15.207.115.183'        // Replace with your EC2 instance IP
         DEPLOY_PATH = '/var/www/laravel-app'    // Path on EC2 to deploy the app
-        GIT_REPO = 'git@github.com:pramila26/laravel-crud-demo.git' // Your Git repository URL
+        GIT_REPO = 'https://github.com/pramila26/laravel-crud-demo.git' // Your Git repository URL
         SSH_CREDENTIALS_ID = 'ec2-deploy-key'   // The ID of the SSH credential you set up
     }
 
