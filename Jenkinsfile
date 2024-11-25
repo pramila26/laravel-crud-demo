@@ -2,18 +2,43 @@ pipeline {
     agent any
 
     environment {
-        DEPLOY_SERVER_IP = '15.207.54.233'        // Replace with your EC2 instance IP
-        DEPLOY_PATH = '/var/www/laravel-app'    // Path on EC2 to deploy the app
-        GIT_REPO = 'https://github.com/pramila26/laravel-crud-demo.git' // Your Git repository URL
-        SSH_CREDENTIALS_ID = 'ec2-deploy-key'   // The ID of the SSH credential you set up
+        DEPLOY_SERVER_IP = '15.207.54.233'
+        DEPLOY_PATH = '/var/www/laravel-app'
+        GIT_REPO = 'https://github.com/pramila26/laravel-crud-demo.git'  // Your Git repository URL
+        SSH_CREDENTIALS_ID = 'ec2-deploy-key'    // Your Jenkins SSH credentials ID
     }
 
     stages {
-        stage('Example') {
+        stage('Clone Repository') {
             steps {
-                // Use the environment variables
-                sh 'echo "Deploying to $DEPLOY_SERVER at $DEPLOY_PATH"'
+                git credentialsId: "${SSH_CREDENTIALS_ID}", url: "${GIT_REPO}"
             }
+        }
+
+        stage('Deploy') {
+            steps {
+                sshagent(credentials: ["${SSH_CREDENTIALS_ID}"]) {
+                    sh """
+                    cd ${DEPLOY_PATH}
+                    composer install --no-dev --optimize-autoloader
+                    cp .env.example .env
+                    php artisan key:generate
+                    php artisan migrate --force
+                    php artisan config:cache
+                    php artisan route:cache
+                    php artisan view:cache
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Deployment failed.'
         }
     }
 }
