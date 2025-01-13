@@ -2,25 +2,56 @@ pipeline {
     agent any
 
     environment {
-        DEPLOY_SERVER_IP = '16.170.141.165'        // Replace with your EC2 instance IP
-        DEPLOY_PATH = '/var/www/laravel-crud-demo'    // Path on EC2 to deploy the app
-        GIT_REPO = 'https://github.com/pramila26/laravel-crud-demo.git' // Your Git repository URL
-        SSH_CREDENTIALS_ID = '13.61.17.158'   // The ID of the SSH credential you set up
+        // Define environment variables (like server credentials, etc.)
+        DEPLOY_SERVER = ' ubuntu@15.206.186.245 '  // Change this to your EC2 user and IP address
+        DEPLOY_PATH = ' /var/www/laravel-crud-demo '  // Path on the EC2 instance
+        GIT_BRANCH = 'main'  // Git branch to deploy
     }
 
     stages {
-        stage('Example') {
+        stage('Checkout') {
             steps {
-                // Use the environment variables
-                sh 'echo "Deploying to $DEPLOY_SERVER_IP at $DEPLOY_PATH"'
+                // Clone the GitHub repository
+                git branch: "${GIT_BRANCH}", url: ' https://github.com/pramila26/laravel-crud-demo.git '
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                // Install Composer dependencies
+                sh 'composer install --no-dev --optimize-autoloader'
+            }
+        }
+
+        stage('Deploy to Server') {
+            steps {
+                // Deploy the code to the EC2 instance
+                sshagent(credentials: [' ec2-deploy-key ']) { // Use Jenkins credentials for SSH access
+                    sh """
+                        # SSH into the EC2 instance and deploy
+                        ssh ${DEPLOY_SERVER} << EOF
+                            # Navigate to the project directory on the EC2 instance
+                            cd ${DEPLOY_PATH}
+                            git pull origin ${GIT_BRANCH}
+                            composer install --no-dev --optimize-autoloader
+                            php artisan migrate --force  # Run database migrations
+                            chmod -R 775 storage bootstrap/cache  # Set the right permissions
+                            php artisan config:cache
+                            php artisan route:cache
+                            php artisan view:cache
+                            
+                            # Restart Apache (ensure Apache is installed and running)
+                            sudo systemctl restart apache2  # For Apache
+                        EOF
+                    """
+                }
             }
         }
     }
-   
 
     post {
         success {
-            echo 'Deployment to EC2 successful!'
+            echo 'Deployment successful!'
         }
         failure {
             echo 'Deployment failed!'
