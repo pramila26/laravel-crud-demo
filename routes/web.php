@@ -6,5 +6,5 @@ Route::get('/', function () {
     return view('welcome');
 });
 Route::get('/', function () {
-    return "Hello world!";
+    return "This is my hello world program";
 });
